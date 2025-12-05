@@ -29,6 +29,7 @@ variable "instance_count" {
 variable "key_name" {
   description = "SSH key name (create in AWS first)"
   type        = string
+  default = "devops"
 }
 
 variable "allowed_cidr" {
