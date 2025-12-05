@@ -59,11 +59,9 @@ resource "null_resource" "grafana_provisioner" {
     type        = "ssh"
     host        = each.value.public_ip
     user        = "ubuntu"
-    # Prefer using a local private key file if present (project root), but
-    # fall back to SSH agent auth if not. This avoids hard-failing when the
-    # key isn't checked into the repo.
-    private_key = try(file("${path.module}/../${var.key_name}.pem"), "")
-    agent       = true
+    # Use a private key stored alongside your Terraform files in the terraform/ directory.
+    # Make sure a file named "devops.pem" exists in this folder on the Jenkins agent.
+    private_key = file("${path.module}/devops.pem")
     timeout     = "2m"
   }
 
@@ -74,9 +72,9 @@ resource "null_resource" "grafana_provisioner" {
   }
 
   provisioner "local-exec" {
-    command = "cd \"/Users/harshraj/Desktop/VS Code/Terraform/Devops-Project/playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts grafana.yaml"
+    command = "cd \"${path.module}/../playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts grafana.yaml"
   }
   provisioner "local-exec" {
-    command = "cd \"/Users/harshraj/Desktop/VS Code/Terraform/Devops-Project/playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts install-prometheus.yaml"
+    command = "cd \"${path.module}/../playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts install-prometheus.yaml"
   }
 }
