@@ -59,7 +59,11 @@ resource "null_resource" "grafana_provisioner" {
     type        = "ssh"
     host        = each.value.public_ip
     user        = "ubuntu"
-    private_key = file("${var.key_name}.pem")
+    # Prefer using a local private key file if present (project root), but
+    # fall back to SSH agent auth if not. This avoids hard-failing when the
+    # key isn't checked into the repo.
+    private_key = try(file("${path.module}/../${var.key_name}.pem"), "")
+    agent       = true
     timeout     = "2m"
   }
 
@@ -70,14 +74,9 @@ resource "null_resource" "grafana_provisioner" {
   }
 
   provisioner "local-exec" {
-    # Run both playbooks from the project playbooks directory. Use absolute paths built from path.module
-    command     = <<EOT
-${"${path.module}"}/../playbooks/grafana-run.sh
-EOT
-    interpreter = ["bash", "-c"]
-    working_dir = path.module
-    environment = {
-      PATH = "/opt/homebrew/bin:/usr/local/bin"
-    }
+    command = "cd \"/Users/harshraj/Desktop/VS Code/Terraform/Devops-Project/playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts grafana.yaml"
+  }
+  provisioner "local-exec" {
+    command = "cd \"/Users/harshraj/Desktop/VS Code/Terraform/Devops-Project/playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts install-prometheus.yaml"
   }
 }

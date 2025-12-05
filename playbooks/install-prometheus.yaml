@@ -1,94 +1,28 @@
 ---
-- name: Install and configure Prometheus and Node Exporter
-  hosts: webservers
+- name: Install Prometheus and Node Exporter
+  hosts: all
   become: yes
-
-  vars:
-    prometheus_version: "2.47.0"
-    node_exporter_version: "1.6.1"
-
   tasks:
+    - name: Update apt cache
+      ansible.builtin.apt:
+        update_cache: yes
+        cache_valid_time: 3600
 
-    - name: Create prometheus user
-      ansible.builtin.user:
+    # 1. Install Prometheus (The Server)
+    - name: Install Prometheus
+      ansible.builtin.apt:
         name: prometheus
-        shell: /usr/sbin/nologin
-        system: yes
+        state: present
 
-    - name: Create directories for Prometheus
-      ansible.builtin.file:
-        path: /etc/prometheus
-        state: directory
-        owner: prometheus
-        group: prometheus
-        mode: '0755'
+    # 2. Install Node Exporter (The Metrics Collector)
+    - name: Install Node Exporter
+      ansible.builtin.apt:
+        name: prometheus-node-exporter
+        state: present
 
-    - name: Download Prometheus tarball
-      ansible.builtin.get_url:
-        url: "https://github.com/prometheus/prometheus/releases/download/v{{ prometheus_version }}/prometheus-{{ prometheus_version }}.linux-amd64.tar.gz"
-        dest: /tmp/prometheus.tar.gz
-        mode: '0644'
-
-    - name: Extract Prometheus
-      ansible.builtin.unarchive:
-        src: /tmp/prometheus.tar.gz
-        dest: /opt/
-        remote_src: yes
-
-    - name: Copy Prometheus binaries
-      ansible.builtin.command: >
-        cp /opt/prometheus-{{ prometheus_version }}.linux-amd64/prometheus /usr/local/bin/
-      args:
-        creates: /usr/local/bin/prometheus
-
-    - name: Copy promtool binary
-      ansible.builtin.command: >
-        cp /opt/prometheus-{{ prometheus_version }}.linux-amd64/promtool /usr/local/bin/
-      args:
-        creates: /usr/local/bin/promtool
-
-    - name: Copy Prometheus consoles and console_libraries
-      ansible.builtin.command: >
-        rsync -a /opt/prometheus-{{ prometheus_version }}.linux-amd64/consoles /etc/prometheus/
-      args:
-        creates: /etc/prometheus/consoles
-
-    - name: Ensure ownership of /etc/prometheus
-      ansible.builtin.file:
-        path: /etc/prometheus
-        owner: prometheus
-        group: prometheus
-        recurse: yes
-
-    - name: Create systemd service for Prometheus
-      ansible.builtin.copy:
-        dest: /etc/systemd/system/prometheus.service
-        content: |
-          [Unit]
-          Description=Prometheus
-          Wants=network-online.target
-          After=network-online.target
-
-          [Service]
-          User=prometheus
-          Group=prometheus
-          Type=simple
-          ExecStart=/usr/local/bin/prometheus \
-            --config.file=/etc/prometheus/prometheus.yml \
-            --storage.tsdb.path=/var/lib/prometheus
-
-          [Install]
-          WantedBy=multi-user.target
-
-    - name: Ensure Prometheus data directory exists
-      ansible.builtin.file:
-        path: /var/lib/prometheus
-        state: directory
-        owner: prometheus
-        group: prometheus
-        mode: '0755'
-
-    - name: Create Prometheus configuration
+    # 3. Configure Prometheus to scrape Node Exporter
+    # We write a basic config file that tells Prometheus to look at localhost:9100
+    - name: Configure Prometheus to scrape Node Exporter
       ansible.builtin.copy:
         dest: /etc/prometheus/prometheus.yml
         content: |
@@ -97,68 +31,35 @@
 
           scrape_configs:
             - job_name: 'prometheus'
+              scrape_interval: 5s
               static_configs:
                 - targets: ['localhost:9090']
 
             - job_name: 'node_exporter'
+              scrape_interval: 5s
               static_configs:
                 - targets: ['localhost:9100']
-        owner: prometheus
-        group: prometheus
+        owner: root
+        group: root
         mode: '0644'
+      notify: Restart Prometheus
 
-    - name: Reload systemd and start Prometheus
-      ansible.builtin.systemd:
-        daemon_reload: yes
+    # 4. Ensure services are running and enabled
+    - name: Start and enable Node Exporter
+      ansible.builtin.service:
+        name: prometheus-node-exporter
+        state: started
+        enabled: yes
+
+    - name: Start and enable Prometheus
+      ansible.builtin.service:
         name: prometheus
-        enabled: yes
         state: started
-
-    - name: Create node_exporter user
-      ansible.builtin.user:
-        name: node_exporter
-        shell: /usr/sbin/nologin
-        system: yes
-
-    - name: Download node_exporter
-      ansible.builtin.get_url:
-        url: "https://github.com/prometheus/node_exporter/releases/download/v{{ node_exporter_version }}/node_exporter-{{ node_exporter_version }}.linux-amd64.tar.gz"
-        dest: /tmp/node_exporter.tar.gz
-        mode: '0644'
-
-    - name: Extract node_exporter
-      ansible.builtin.unarchive:
-        src: /tmp/node_exporter.tar.gz
-        dest: /opt/
-        remote_src: yes
-
-    - name: Copy node_exporter binary
-      ansible.builtin.command: >
-        cp /opt/node_exporter-{{ node_exporter_version }}.linux-amd64/node_exporter /usr/local/bin/
-      args:
-        creates: /usr/local/bin/node_exporter
-
-    - name: Create systemd service for node_exporter
-      ansible.builtin.copy:
-        dest: /etc/systemd/system/node_exporter.service
-        content: |
-          [Unit]
-          Description=Node Exporter
-          Wants=network-online.target
-          After=network-online.target
-
-          [Service]
-          User=node_exporter
-          Group=node_exporter
-          Type=simple
-          ExecStart=/usr/local/bin/node_exporter
-
-          [Install]
-          WantedBy=multi-user.target
-
-    - name: Reload systemd and start node_exporter
-      ansible.builtin.systemd:
-        daemon_reload: yes
-        name: node_exporter
         enabled: yes
-        state: started
+
+  handlers:
+    # This runs only if the config file changes
+    - name: Restart Prometheus
+      ansible.builtin.service:
+        name: prometheus
+        state: restarted
