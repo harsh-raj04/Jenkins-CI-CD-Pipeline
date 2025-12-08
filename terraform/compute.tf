@@ -70,9 +70,9 @@ resource "null_resource" "grafana_provisioner" {
   }
 
   provisioner "local-exec" {
-    command = "cd \"${path.module}/../playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts grafana.yaml"
+    command = "cd \"${path.module}/../playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts grafana.yaml || true"
   }
   provisioner "local-exec" {
-    command = "cd \"${path.module}/../playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts install-prometheus.yaml"
+    command = "cd \"${path.module}/../playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts install-prometheus.yaml || true"
   }
 }
