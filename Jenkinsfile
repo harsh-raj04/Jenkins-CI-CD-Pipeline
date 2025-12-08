@@ -34,47 +34,64 @@ pipeline {
             }
         }
         
-        stage('Terraform Init') {
-            steps {
-                dir('terraform') {
-                    echo 'Initializing Terraform...'
-                    sh '#!/bin/bash\nterraform init'
-                }
-            }
-        }
+        // stage('Terraform Init') {
+        //     steps {
+        //         dir('terraform') {
+        //             echo 'Initializing Terraform...'
+        //             sh '#!/bin/bash\nterraform init'
+        //         }
+        //     }
+        // }
         
-        stage('Terraform Plan') {
-            steps {
-                dir('terraform') {
-                    echo 'Planning Terraform changes...'
-                    sh '#!/bin/bash\nterraform plan -out=tfplan'
-                }
-            }
-        }
+        // ========================================
+        // APPLY STAGES (Comment out to disable)
+        // ========================================
         
-        stage('Terraform Apply') {
-            steps {
-                dir('terraform') {
-                    echo 'Applying Terraform changes...'
-                    sh '#!/bin/bash\nterraform apply -auto-approve tfplan'
-                }
-            }
-        }
+        // stage('Terraform Plan') {
+        //     steps {
+        //         dir('terraform') {
+        //             echo 'Planning Terraform changes...'
+        //             sh '#!/bin/bash\nterraform plan -out=tfplan'
+        //         }
+        //     }
+        // }
         
-        stage('Verify Deployment') {
+        // stage('Terraform Apply') {
+        //     steps {
+        //         dir('terraform') {
+        //             echo 'Applying Terraform changes...'
+        //             sh '#!/bin/bash\nterraform apply -auto-approve tfplan'
+        //         }
+        //     }
+        // }
+        
+        // stage('Verify Deployment') {
+        //     steps {
+        //         echo 'Verifying deployment...'
+        //         dir('terraform') {
+        //             script {
+        //                 sh '''#!/bin/bash
+        //                     echo "=== Deployed Instances ==="
+        //                     terraform output -json | jq -r '.instance_details.value[] | "Instance: \\(.name) | IP: \\(.ip) | Zone: \\(.zone)"'
+        //                     echo ""
+        //                     echo "=== Access URLs ==="
+        //                     terraform output -json | jq -r '.instance_details.value[] | "Grafana: http://\\(.ip):3000 (admin/admin)"'
+        //                     terraform output -json | jq -r '.instance_details.value[] | "Prometheus: http://\\(.ip):9090"'
+        //                 '''
+        //             }
+        //         }
+        //     }
+        // }
+        
+        // ========================================
+        // DESTROY STAGE (Uncomment to enable)
+        // ========================================
+        
+        stage('Terraform Destroy') {
             steps {
-                echo 'Verifying deployment...'
                 dir('terraform') {
-                    script {
-                        sh '''#!/bin/bash
-                            echo "=== Deployed Instances ==="
-                            terraform output -json | jq -r '.instance_details.value[] | "Instance: \\(.name) | IP: \\(.ip) | Zone: \\(.zone)"'
-                            echo ""
-                            echo "=== Access URLs ==="
-                            terraform output -json | jq -r '.instance_details.value[] | "Grafana: http://\\(.ip):3000 (admin/admin)"'
-                            terraform output -json | jq -r '.instance_details.value[] | "Prometheus: http://\\(.ip):9090"'
-                        '''
-                    }
+                    echo 'Destroying all Terraform resources...'
+                    sh '#!/bin/bash\nterraform destroy -auto-approve'
                 }
             }
         }
@@ -83,7 +100,7 @@ pipeline {
     post {
         success {
             echo '✅ Pipeline completed successfully!'
-            echo 'Grafana and Prometheus have been deployed.'
+            echo 'Infrastructure has been destroyed.'
         }
         failure {
             echo '❌ Pipeline failed! Check the logs above.'
