@@ -1,145 +1,140 @@
-# Simple AWS EC2 with Terraform
+# Jenkins CI/CD Pipeline for Terraform + Ansible
 
-Learn Terraform by launching a basic EC2 instance on AWS - super simple!
+Automated deployment of EC2 instances with Grafana and Prometheus using Jenkins, Terraform, and Ansible.
 
 ## 📋 What This Does
 
-Launches 1 Ubuntu server on AWS with:
-- **Nginx web server** installed automatically
-- **SSH access** to connect to your server
-- **Simple website** saying "Hello from Terraform!"
+Automatically deploys AWS infrastructure with monitoring stack:
+- **EC2 instances** across multiple availability zones
+- **Grafana** for visualization (port 3000)
+- **Prometheus** for metrics collection (port 9090)
+- **Automated provisioning** via Jenkins pipeline on git push
 
-## 📁 Files (Only 3!)
+## 📁 Project Structure
 
 ```
-networking.tf    # Creates VPC, subnet, firewall
-compute.tf       # Creates EC2 instance
-variables.tf     # Your settings
+.
+├── Jenkinsfile                 # Jenkins pipeline definition
+├── terraform/
+│   ├── compute.tf             # EC2 instances
+│   ├── networking.tf          # VPC, subnets, security groups
+│   ├── variables.tf           # Input variables
+│   ├── terraform.tfvars       # Variable values
+│   ├── outputs.tf             # Output definitions
+│   └── local_files.tf         # Ansible inventory management
+├── playbooks/
+│   ├── ansible.cfg            # Ansible configuration
+│   ├── aws_hosts              # Dynamic inventory (auto-generated)
+│   ├── grafana.yaml           # Grafana installation playbook
+│   └── install-prometheus.yaml # Prometheus installation playbook
+└── README.md
 ```
 
-## 🚀 Quick Start
+## 🚀 Jenkins Pipeline Setup
 
-### Step 1: Prerequisites
+### Prerequisites
+- Jenkins with Git, Pipeline plugins
+- Terraform and Ansible installed on Jenkins server
+- AWS credentials configured
+- SSH key (`devops.pem`) in `~/.ssh/` on Jenkins server
 
-1. **AWS Account** - [Sign up](https://aws.amazon.com)
-2. **Install Terraform** - [Download](https://www.terraform.io/downloads)
-3. **AWS CLI** configured:
-   ```bash
-   aws configure
-   ```
-4. **Create SSH Key** in AWS Console:
-   - Go to EC2 → Key Pairs → Create Key Pair
-   - Save the `.pem` file
+### Step 1: Create Pipeline Job
 
-### Step 2: Configure
+1. In Jenkins, click **New Item**
+2. Enter name: `terraform-ansible-pipeline`
+3. Select **Pipeline** → OK
+
+### Step 2: Configure Pipeline
+
+**Build Triggers:**
+- ✅ Check "GitHub hook trigger for GITScm polling"
+
+**Pipeline Section:**
+- Definition: `Pipeline script from SCM`
+- SCM: `Git`
+- Repository URL: `https://github.com/harsh-raj04/Jenkins-CI-CD-Pipeline`
+- Branch: `*/main`
+- Script Path: `Jenkinsfile`
+
+### Step 3: Setup GitHub Webhook (Auto-trigger)
+
+1. Go to GitHub repo → **Settings** → **Webhooks** → **Add webhook**
+2. Payload URL: `http://<jenkins-url>/github-webhook/`
+3. Content type: `application/json`
+4. Events: "Just the push event"
+5. Click **Add webhook**
+
+### Step 4: Setup SSH Key
 
 ```bash
-# Copy example file
-cp terraform.tfvars.example terraform.tfvars
-
-# Edit it (only change key_name!)
-nano terraform.tfvars
+# Copy AWS SSH key to Jenkins server
+cp /path/to/devops.pem ~/.ssh/devops.pem
+chmod 600 ~/.ssh/devops.pem
 ```
 
-Change this line:
+## 🔄 Pipeline Workflow
+
+1. **Push code** to GitHub
+2. **GitHub webhook** triggers Jenkins
+3. **Jenkins** runs pipeline:
+   - Checkout code
+   - Setup SSH key
+   - Terraform init/plan/apply
+   - Ansible provisions Grafana & Prometheus
+4. **Services deployed** and accessible
+
+## 📊 Access Deployed Services
+
+After successful deployment:
+- **Grafana**: `http://<instance-ip>:3000` (admin/admin)
+- **Prometheus**: `http://<instance-ip>:9090`
+
+Get IPs from Jenkins console output or:
+```bash
+cd terraform
+terraform output instance_details
+```
+
+## 🔧 Configuration
+
+**Change instance count:**
 ```hcl
-key_name = "your-key-name"    # Put your AWS key name here
+# terraform/terraform.tfvars
+instance_count = 1  # Increase to deploy more
 ```
 
-### Step 3: Deploy
-
-```bash
-terraform init       # Download AWS provider
-terraform plan       # See what will be created
-terraform apply      # Create it! (type 'yes')
+**Change AWS region:**
+```hcl
+# terraform/terraform.tfvars
+aws_region = "us-east-1"
 ```
-
-**Done!** In 2 minutes you'll see:
-```
-instance_ip = "3.123.45.67"
-website_url = "http://3.123.45.67"
-ssh_command = "ssh -i your-key.pem ubuntu@3.123.45.67"
-```
-
-## 🌐 Test It
-
-1. **View Website**: Open `website_url` in browser
-2. **SSH into Server**: Use the `ssh_command` shown
-
-## 📖 Understanding Each File
-
-### `networking.tf` - Network Setup
-```
-What it does:
-1. Creates a VPC (your private network)
-2. Creates a subnet (part of the network)
-3. Creates internet gateway (connects to internet)
-4. Creates security group (firewall rules)
-```
-
-### `compute.tf` - The Server
-```
-What it does:
-1. Finds latest Ubuntu image
-2. Launches EC2 instance
-3. Installs Nginx web server
-4. Creates a simple webpage
-```
-
-### `variables.tf` - Your Settings
-```
-What you can change:
-- aws_region: Where to launch (us-east-1, eu-west-1, etc.)
-- instance_type: Server size (t2.micro is FREE!)
-- key_name: Your SSH key
-- allowed_cidr: Who can SSH in
-```
-
-## 💰 Cost
-
-- **t2.micro** = FREE (750 hours/month for 1 year)
-- After free tier: ~$8/month
-
-## 🛠️ Useful Commands
-
-```bash
-# See outputs again
-terraform output
-
-# SSH into your server
-ssh -i your-key.pem ubuntu@<ip-address>
-
-# Destroy everything (delete all resources)
-terraform destroy
-```
-
-## 🔧 Common Issues
-
-**"Invalid credentials"**
-```bash
-aws configure    # Enter your AWS access keys
-```
-
-**"Key pair not found"**
-- Make sure key_name in terraform.tfvars matches AWS key name exactly
-
-**"Permission denied (publickey)"**
-```bash
-chmod 400 your-key.pem    # Fix key permissions
-```
-
-**Can't access website?**
-- Wait 2-3 minutes for Nginx to install
-- Check security group allows port 80
-
-## 🎓 What You're Learning
-
-1. **Infrastructure as Code** - Define infrastructure in files
-2. **AWS Basics** - VPC, subnets, security groups, EC2
-3. **Terraform Workflow** - init → plan → apply → destroy
-4. **Resource Dependencies** - How resources connect
 
 ## 🧹 Cleanup
+
+```bash
+cd terraform
+terraform destroy -auto-approve
+```
+
+## 🐛 Troubleshooting
+
+**Pipeline fails with SSH errors:**
+- Ensure `devops.pem` in `~/.ssh/` on Jenkins server
+- Check permissions: `chmod 600 ~/.ssh/devops.pem`
+
+**Ansible apt lock errors:**
+- Wait 2-3 minutes and retry (cloud-init may be running)
+- Playbooks now auto-wait for locks to clear
+
+**Can't access Grafana/Prometheus:**
+- Verify security group allows ports 3000, 9090
+- Check instance status: `terraform output instance_details`
+
+## 📝 Notes
+
+- Pipeline uses `|| true` to continue if one playbook fails
+- Ansible inventory auto-managed by Terraform
+- SSH key excluded from git (`.gitignore`)
 
 **IMPORTANT**: Delete everything when done to avoid charges:
 ```bash
@@ -164,3 +159,4 @@ Once comfortable, try:
 ---
 
 **New to Terraform?** This is the perfect starting point! Each file has comments explaining what's happening.
+# test
