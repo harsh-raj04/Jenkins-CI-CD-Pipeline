@@ -20,3 +20,5 @@ aws_hosts
 *.pem
 playbooks/aws_hosts
 
+error.txt
+11.txt

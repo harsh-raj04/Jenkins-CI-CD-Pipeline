@@ -23,7 +23,7 @@ variable "instance_type" {
 variable "instance_count" {
   description = "Number of instances to deploy (max: available zones)"
   type        = number
-  default     = 3
+  default     = 1
 }
 
 variable "key_name" {
