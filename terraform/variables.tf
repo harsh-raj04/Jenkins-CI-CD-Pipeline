@@ -40,5 +40,5 @@ variable "allowed_cidr" {
 variable "private_key_path" {
   description = "Path to the SSH private key (.pem) for EC2 access"
   type        = string
-  default     = "/Users/harshraj/Desktop/VS Code/Terraform/Devops-Project/devops.pem"
+  default     = "/Users/harshraj/.ssh/devops.pem"
 }

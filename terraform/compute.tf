@@ -56,14 +56,12 @@ resource "null_resource" "grafana_provisioner" {
   }
 
   connection {
-    type        = "ssh"
-    host        = each.value.public_ip
-    user        = "ubuntu"
-    # Use a private key stored alongside your Terraform files in the terraform/ directory.
-    # Make sure a file named "devops.pem" exists in this folder on the Jenkins agent.
-    private_key = file("${path.module}/devops.pem")
-    timeout     = "2m"
-  }
+  type        = "ssh"
+  host        = each.value.public_ip
+  user        = "ubuntu"
+  private_key = file(var.private_key_path)
+  timeout     = "2m"
+}
 
   provisioner "remote-exec" {
     inline = [
