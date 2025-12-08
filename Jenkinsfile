@@ -4,6 +4,7 @@ pipeline {
     environment {
         AWS_REGION = 'us-east-1'
         TF_IN_AUTOMATION = 'true'
+        PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${env.PATH}"
     }
     
     stages {
@@ -17,17 +18,19 @@ pipeline {
         stage('Setup SSH Key') {
             steps {
                 echo 'Setting up SSH key for Ansible...'
-                sh '''
-                    # Copy SSH key if it doesn't exist in workspace
-                    if [ ! -f devops.pem ]; then
-                        if [ -f ~/.ssh/devops.pem ]; then
-                            cp ~/.ssh/devops.pem .
-                            chmod 600 devops.pem
-                        else
-                            echo "WARNING: SSH key not found. Ansible provisioning may fail."
+                script {
+                    sh '''#!/bin/bash
+                        # Copy SSH key if it doesn't exist in workspace
+                        if [ ! -f devops.pem ]; then
+                            if [ -f ~/.ssh/devops.pem ]; then
+                                cp ~/.ssh/devops.pem .
+                                chmod 600 devops.pem
+                            else
+                                echo "WARNING: SSH key not found. Ansible provisioning may fail."
+                            fi
                         fi
-                    fi
-                '''
+                    '''
+                }
             }
         }
         
@@ -35,7 +38,7 @@ pipeline {
             steps {
                 dir('terraform') {
                     echo 'Initializing Terraform...'
-                    sh 'terraform init'
+                    sh '#!/bin/bash\nterraform init'
                 }
             }
         }
@@ -44,7 +47,7 @@ pipeline {
             steps {
                 dir('terraform') {
                     echo 'Planning Terraform changes...'
-                    sh 'terraform plan -out=tfplan'
+                    sh '#!/bin/bash\nterraform plan -out=tfplan'
                 }
             }
         }
@@ -53,7 +56,7 @@ pipeline {
             steps {
                 dir('terraform') {
                     echo 'Applying Terraform changes...'
-                    sh 'terraform apply -auto-approve tfplan'
+                    sh '#!/bin/bash\nterraform apply -auto-approve tfplan'
                 }
             }
         }
@@ -62,14 +65,16 @@ pipeline {
             steps {
                 echo 'Verifying deployment...'
                 dir('terraform') {
-                    sh '''
-                        echo "=== Deployed Instances ==="
-                        terraform output -json | jq -r '.instance_details.value[] | "Instance: \\(.name) | IP: \\(.ip) | Zone: \\(.zone)"'
-                        echo ""
-                        echo "=== Access URLs ==="
-                        terraform output -json | jq -r '.instance_details.value[] | "Grafana: http://\\(.ip):3000 (admin/admin)"'
-                        terraform output -json | jq -r '.instance_details.value[] | "Prometheus: http://\\(.ip):9090"'
-                    '''
+                    script {
+                        sh '''#!/bin/bash
+                            echo "=== Deployed Instances ==="
+                            terraform output -json | jq -r '.instance_details.value[] | "Instance: \\(.name) | IP: \\(.ip) | Zone: \\(.zone)"'
+                            echo ""
+                            echo "=== Access URLs ==="
+                            terraform output -json | jq -r '.instance_details.value[] | "Grafana: http://\\(.ip):3000 (admin/admin)"'
+                            terraform output -json | jq -r '.instance_details.value[] | "Prometheus: http://\\(.ip):9090"'
+                        '''
+                    }
                 }
             }
         }
@@ -86,7 +91,7 @@ pipeline {
         always {
             echo 'Cleaning up workspace...'
             // Optional: Clean up sensitive files
-            sh 'rm -f devops.pem || true'
+            sh '#!/bin/bash\nrm -f devops.pem || true'
         }
     }
 }
