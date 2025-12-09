@@ -87,20 +87,20 @@ pipeline {
         // DESTROY STAGE (Uncomment to enable)
         // ========================================
         
-    //     stage('Terraform Destroy') {
-    //         steps {
-    //             dir('terraform') {
-    //                 echo 'Destroying all Terraform resources...'
-    //                 sh '#!/bin/bash\nterraform destroy -auto-approve'
-    //             }
-    //         }
-    //     }
-    // }
+        // stage('Terraform Destroy') {
+        //     steps {
+        //         dir('terraform') {
+        //             echo 'Destroying all Terraform resources...'
+        //             sh '#!/bin/bash\nterraform destroy -auto-approve'
+        //         }
+        //     }
+        // }
+    }
     
     post {
         success {
             echo '✅ Pipeline completed successfully!'
-            echo 'Infrastructure has been destroyed.'
+            echo 'Grafana and Prometheus have been deployed.'
         }
         failure {
             echo '❌ Pipeline failed! Check the logs above.'
