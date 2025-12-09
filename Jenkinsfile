@@ -43,9 +43,9 @@ pipeline {
             }
         }
         
-        ========================================
-        APPLY STAGES (Comment out to disable)
-        ========================================
+        // ========================================
+        // APPLY STAGES (Comment out to disable)
+        // ========================================
         
         stage('Terraform Plan') {
             steps {
@@ -83,9 +83,9 @@ pipeline {
             }
         }
         
-        ========================================
-        DESTROY STAGE (Uncomment to enable)
-        ========================================
+        // ========================================
+        // DESTROY STAGE (Uncomment to enable)
+        // ========================================
         
     //     stage('Terraform Destroy') {
     //         steps {
