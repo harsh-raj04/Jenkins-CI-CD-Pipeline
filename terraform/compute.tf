@@ -56,23 +56,20 @@ resource "null_resource" "grafana_provisioner" {
   }
 
   connection {
-  type        = "ssh"
-  host        = each.value.public_ip
-  user        = "ubuntu"
-  private_key = file(var.private_key_path)
-  timeout     = "2m"
-}
+    type        = "ssh"
+    host        = each.value.public_ip
+    user        = "ubuntu"
+    private_key = file(var.private_key_path)
+    timeout     = "2m"
+  }
 
   provisioner "remote-exec" {
     inline = [
-      "echo connection test successful to ${each.value.public_ip}",
+      "echo 'Connection test successful to ${each.value.public_ip}'",
+      "echo 'Instance is ready for configuration'",
     ]
   }
 
-  provisioner "local-exec" {
-    command = "cd \"${path.module}/../playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts grafana.yaml || true"
-  }
-  provisioner "local-exec" {
-    command = "cd \"${path.module}/../playbooks\" && ANSIBLE_CONFIG=./ansible.cfg ansible-playbook -i aws_hosts install-prometheus.yaml || true"
-  }
+  # NOTE: Ansible playbooks are now executed by Jenkins Pipeline
+  # This keeps infrastructure provisioning separate from configuration management
 }
