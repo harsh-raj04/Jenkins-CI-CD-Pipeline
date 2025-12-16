@@ -19,7 +19,7 @@ resource "null_resource" "update_inventory" {
     command = <<-EOT
       # Create aws_hosts file if it doesn't exist
       if [ ! -f ../playbooks/aws_hosts ]; then
-        echo "[webservers]" > ../playbooks/aws_hosts
+        echo "[all]" > ../playbooks/aws_hosts
       fi
       
       # Add new IPs to aws_hosts if not already present

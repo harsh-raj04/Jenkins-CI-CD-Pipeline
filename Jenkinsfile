@@ -4,7 +4,7 @@ pipeline {
     environment {
         AWS_REGION = 'us-east-1'
         TF_IN_AUTOMATION = 'true'
-        PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:${env.PATH}"
+        PATH = "/usr/local/bin:/usr/bin:/bin:/usr/sbin:/sbin:/opt/homebrew/bin"
         ANSIBLE_HOST_KEY_CHECKING = 'False'
     }
     
@@ -228,7 +228,7 @@ pipeline {
             }
         }
         
-        
+
         // ========================================
         // STAGE 13: APPROVE DESTROY (OPTIONAL)
         // ========================================

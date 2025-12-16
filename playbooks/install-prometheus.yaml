@@ -1,5 +1,5 @@
 ---
-- hosts: web_servers
+- hosts: all
   become: yes
   vars:
     prometheus_version: "2.51.2"
